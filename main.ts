@@ -744,7 +744,9 @@ export default class CustomCommands extends Plugin {
   }
 
   keydownListener(e: KeyboardEvent) {
-    const activeLeaf = this.app.workspace.getLeaf();
+    // NOTE: getLeaf() only returns editor leaf, not sidebar leaf
+    // so activeLeaf is still needed
+    const { activeLeaf } = this.app.workspace;
     if (!activeLeaf)
       return;
     const view = activeLeaf.view as any;
@@ -775,11 +777,11 @@ export default class CustomCommands extends Plugin {
       if (e.key === 'p') {
         (
           tab.previousElementSibling || tab.parentElement.lastElementChild
-        ).dispatchEvent(new MouseEvent('click'));
+        ).click();
       } else {
         (
           tab.nextElementSibling || tab.parentElement.firstElementChild
-        ).dispatchEvent(new MouseEvent('click'));
+        ).click();
       }
       return;
     } else if (
