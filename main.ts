@@ -53,6 +53,7 @@ export default class CustomCommands extends Plugin {
   settings: CustomCommandsSettings;
 
   async onload() {
+    // hide window buttons on macOS
     const w = remote.getCurrentWindow() as any;
     if (w.setWindowButtonVisibility) {
       w.setWindowButtonVisibility(false);
@@ -60,6 +61,7 @@ export default class CustomCommands extends Plugin {
 
     this.registerMarkdownPostProcessor((el) => {
       el.findAll('a.footnote-link').forEach((footnote) => {
+        // remove brackets around footnote links
         const text = footnote.textContent || '';
         if (text.startsWith('[') && text.endsWith(']')) {
           footnote.textContent = text.slice(1, -1);
@@ -70,6 +72,7 @@ export default class CustomCommands extends Plugin {
     this.registerEvent(
       this.app.workspace.on('active-leaf-change', (l: WorkspaceLeaf | null) => {
         if (l && l.view.getViewType() === 'outline') {
+          // sync focused item in outline with cursor position
           const { tree, view } = l.view as any;
           const { cachedHeadingDom } = view;
           const { focusedItem } = tree;
@@ -261,6 +264,7 @@ export default class CustomCommands extends Plugin {
     );
   }
 
+  /* wrap selection with prefix and suffix strings */
   wrapSelection(
     beforeStr: string,
     afterStr: string,
@@ -285,6 +289,7 @@ export default class CustomCommands extends Plugin {
       return { anchor: pos, head: pos };
   }
 
+  /* toggle HTML tag under cursor */
   toggleTag(editor: Editor, tagName: string) {
     let endSelection;
     const pos = editor.getCursor();
@@ -343,6 +348,7 @@ export default class CustomCommands extends Plugin {
       editor.setSelection(endSelection.anchor, endSelection.head);
   }
 
+  /* toggle markdown style under cursor */
   toggleStyle(editor: Editor, style: string) {
     const map: { [key: string]: [string, string] } = {
       'strong': ['**', '**'],
@@ -375,24 +381,16 @@ export default class CustomCommands extends Plugin {
           return;
         } else if (node.matches('.cm-formatting')) {
           if (
-            node.nextElementSibling?.matches(
-              `.cm-${style}:not(.cm-formatting)`,
-            )
-            && node.nextElementSibling.nextElementSibling?.matches(
-              `.cm-${style}.cm-formatting`,
-            )
+            node.nextElementSibling?.matches(`.cm-${style}:not(.cm-formatting)`)
+            && node.nextElementSibling.nextElementSibling?.matches(`.cm-${style}.cm-formatting`)
           ) {
             range.push(
               node.nextElementSibling.cmView,
               node.nextElementSibling.nextElementSibling.cmView,
             );
           } else if (
-            node.previousElementSibling?.matches(
-              `.cm-${style}:not(.cm-formatting)`,
-            )
-            && node.previousElementSibling.previousElementSibling?.matches(
-              `.cm-${style}.cm-formatting`,
-            )
+            node.previousElementSibling?.matches(`.cm-${style}:not(.cm-formatting)`)
+            && node.previousElementSibling.previousElementSibling?.matches(`.cm-${style}.cm-formatting`)
           ) {
             range.push(
               node.previousElementSibling.cmView,
@@ -400,9 +398,7 @@ export default class CustomCommands extends Plugin {
             );
           }
         } else if (
-          node.previousElementSibling?.matches(
-            `.cm-${style}.cm-formatting`,
-          )
+          node.previousElementSibling?.matches(`.cm-${style}.cm-formatting`)
           && node.nextElementSibling?.matches(`.cm-${style}.cm-formatting`)
         ) {
           range.push(
@@ -451,6 +447,7 @@ export default class CustomCommands extends Plugin {
       editor.setCursor(cursor);
   }
 
+  /* toggle link under cursor */
   toggleLink(editor: Editor) {
     let endPos: EditorPosition | undefined;
     const pos = editor.getCursor();
@@ -462,10 +459,8 @@ export default class CustomCommands extends Plugin {
       let match = re.exec(line.slice(x));
       while (match) {
         if (
-          (pos.ch >= x + match.index
-            && pos.ch < x + match.index + match[0].length)
-          || (pos.ch > x + match.index
-            && pos.ch <= x + match.index + match[0].length)
+          (pos.ch >= x + match.index && pos.ch < x + match.index + match[0].length)
+          || (pos.ch > x + match.index && pos.ch <= x + match.index + match[0].length)
         ) {
           editor.replaceRange(
             match[1],
@@ -486,9 +481,7 @@ export default class CustomCommands extends Plugin {
           match = re.exec(line.slice(x));
         }
       }
-    } else if (
-      selection.focusNode.parentElement.closest('.cm-hmd-internal-link')
-    ) {
+    } else if (selection.focusNode.parentElement.closest('.cm-hmd-internal-link')) {
       const re = /\[\[(.*?)\]\]/;
       let x = 0;
       let match = re.exec(line.slice(x));
@@ -497,9 +490,8 @@ export default class CustomCommands extends Plugin {
           pos.ch >= x + match.index
           && pos.ch < x + match.index + match[0].length
         ) {
-          if (match[1].includes('|')) {
+          if (match[1].includes('|'))
             match[1] = match[1].split('|')[1];
-          }
           editor.replaceRange(
             match[1],
             { line: pos.line, ch: x + match.index },
@@ -527,11 +519,11 @@ export default class CustomCommands extends Plugin {
       }
       (this.app as any).commands.executeCommandById('editor:insert-link');
     }
-    if (endPos) {
+    if (endPos)
       editor.setCursor(endPos);
-    }
   }
 
+  /* toggle heading level */
   toggleHeading(editor: Editor, level?: number) {
     const line = editor.getLine(editor.getCursor().line);
     (editor as any).setHeading(
@@ -539,11 +531,13 @@ export default class CustomCommands extends Plugin {
     );
   }
 
+  /* show notification */
   notify(message: string, timeout: number = 1000) {
     // eslint-disable-next-line no-new
     new Notice(message, timeout);
   }
 
+  /* copy current file full path to clipboard */
   copyPath() {
     const file = this.app.workspace.getActiveFile();
     if (!file)
@@ -553,33 +547,25 @@ export default class CustomCommands extends Plugin {
     this.notify('Path copied to clipboard!');
   }
 
+  /* navigate between panes, tabs, or splits */
   navigate(direction: 'top' | 'bottom' | 'left' | 'right') {
     const { workspace, commands } = this.app as any;
     if (
-      (document.activeElement?.matches('.prompt-input')
-        || document.querySelector('.suggestion-container'))
+      (document.activeElement?.matches('.prompt-input') || document.querySelector('.suggestion-container'))
       && ['top', 'bottom'].includes(direction)
-    ) {
+    ) { // navigate up/down in command palette or quick switcher
       document.dispatchEvent(
         new KeyboardEvent('keydown', {
           key: direction === 'top' ? 'p' : 'n',
           ctrlKey: true,
         }),
       );
-    } else if (
-      workspace.getAdjacentLeafInDirection(
-        workspace.activeLeaf,
-        direction,
-      )
-    ) {
+    } else if (workspace.getAdjacentLeafInDirection(workspace.activeLeaf, direction)) { // navigate to adjacent leaf
       commands.executeCommandById(`editor:focus-${direction}`);
     } else if (direction === 'right') {
-      if (
-        workspace.activeTabGroup.currentTab
-        < workspace.activeTabGroup.children.length - 1
-      ) {
+      if (workspace.activeTabGroup.currentTab < workspace.activeTabGroup.children.length - 1) { // navigate to next tab, if any
         commands.executeCommandById(`workspace:next-tab`);
-      } else if (!workspace.rightSplit.collapsed) {
+      } else if (!workspace.rightSplit.collapsed) { // navigate to sidebar, if opened
         const split = workspace.rightSplit.children[0] as any;
         workspace.setActiveLeaf(split.children[split.currentTab], {
           focus: true,
@@ -597,6 +583,7 @@ export default class CustomCommands extends Plugin {
     }
   }
 
+  /* create new file in current file's folder */
   newFileInPath() {
     const activeLeaf = this.app.workspace.getLeaf();
     if (!activeLeaf || !(activeLeaf.view as any).file)
@@ -607,6 +594,7 @@ export default class CustomCommands extends Plugin {
       .then((file: TFile) => activeLeaf.openFile(file));
   }
 
+  /* smart close */
   closeEditor() {
     const activeLeaf = this.app.workspace.getLeaf();
     if (!activeLeaf)
@@ -614,18 +602,18 @@ export default class CustomCommands extends Plugin {
     const { view, history } = activeLeaf as any;
     const onlyOne
       = (this.app.workspace.rootSplit as any).children.length === 1
-        && (this.app.workspace.rootSplit as any).children[0].children.length
-        === 1
+        && (this.app.workspace.rootSplit as any).children[0].children.length === 1
         && (this.app.workspace as any).activeTabGroup.children.length === 1;
-    if (onlyOne && (view as any).emptyStateEl) {
+    if (onlyOne && (view as any).emptyStateEl) { // if only one empty tab, close window
       window.close();
-    } else if (onlyOne && history.backHistory.length > 0) {
+    } else if (onlyOne && history.backHistory.length > 0) { // if only one tab with history, go back
       (this.app as any).commands.executeCommandById('app:go-back');
-    } else {
+    } else { // close current tab
       (this.app as any).commands.executeCommandById('workspace:close');
     }
   }
 
+  /* move file to trash and close current tab */
   deleteFile() {
     const file = this.app.workspace.getActiveFile();
     if (!file)
@@ -647,6 +635,7 @@ export default class CustomCommands extends Plugin {
     }
   }
 
+  /* fold/unfold sublists under current indent level */
   foldSublists(target: HTMLElement) {
     const getLevel = (el: HTMLElement) =>
       el?.querySelector('span[class*="cm-list-"]')
@@ -662,27 +651,19 @@ export default class CustomCommands extends Plugin {
     const subLists: HTMLElement[] = [];
     let line = currentLine.previousElementSibling as HTMLElement;
     while (line && getLevel(line) > level) {
-      if (line.querySelector('.cm-fold-indicator')) {
-        subLists.unshift(
-          line.querySelector('.cm-fold-indicator') as HTMLElement,
-        );
-      }
+      if (line.querySelector('.cm-fold-indicator'))
+        subLists.unshift(line.querySelector('.cm-fold-indicator') as HTMLElement);
       line = line.previousElementSibling as HTMLElement;
     }
     line = currentLine as HTMLElement;
     while (line && getLevel(line) > level) {
-      if (line.querySelector('.cm-fold-indicator')) {
-        subLists.push(
-          line.querySelector('.cm-fold-indicator') as HTMLElement,
-        );
-      }
+      if (line.querySelector('.cm-fold-indicator'))
+        subLists.push(line.querySelector('.cm-fold-indicator') as HTMLElement);
       line = line.nextElementSibling as HTMLElement;
     }
     if (subLists.length === 0)
       return;
-    const shouldFold = subLists.some(
-      l => !l.classList.contains('is-collapsed'),
-    );
+    const shouldFold = subLists.some(l => !l.classList.contains('is-collapsed'));
     subLists.forEach((l) => {
       const isCollapsed = l.classList.contains('is-collapsed');
       if (shouldFold !== isCollapsed)
@@ -695,14 +676,12 @@ export default class CustomCommands extends Plugin {
     if (target.matches('.empty-state-action.mod-close')) {
       event.preventDefault();
       this.closeLastTab();
-    } else if (
-      target.matches('.markdown-source-view .cm-line .cm-indent')
-    ) {
+    if (target.matches('.markdown-source-view .cm-line .cm-indent')) {
+      // click on indent to fold/unfold sublists
       event.preventDefault();
       this.foldSublists(target);
-    } else if (
-      target.closest('.markdown-rendered button.copy-code-button')
-    ) {
+    } else if (target.closest('.markdown-rendered button.copy-code-button')) {
+      // show animation after clicking copy code button
       const button = target.closest('.markdown-rendered button.copy-code-button');
       if (!button)
         return;
@@ -714,6 +693,7 @@ export default class CustomCommands extends Plugin {
   mouseListener(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (target.matches('.markdown-source-view .cm-line .cm-indent')) {
+      // highlight indent line on hover
       event.preventDefault();
       const indent = target;
       if (!indent.parentElement)
@@ -736,9 +716,7 @@ export default class CustomCommands extends Plugin {
         nextLine = nextLine.nextElementSibling as HTMLElement;
       }
       idt.forEach(i =>
-        i?.classList[event.type === 'mouseover' ? 'add' : 'remove'](
-          'cm-active-indent',
-        ),
+        i?.classList[event.type === 'mouseover' ? 'add' : 'remove']('cm-active-indent'),
       );
     }
   }
@@ -763,6 +741,7 @@ export default class CustomCommands extends Plugin {
       && ['j', 'k'].includes(e.key)
       && e.ctrlKey
     ) {
+      // navigate up/down in command palette or quick switcher
       e.preventDefault();
       const map = { j: 'arrowdown', k: 'arrowup' };
       const key = map[e.key as 'j' | 'k'];
@@ -773,24 +752,17 @@ export default class CustomCommands extends Plugin {
       && ['n', 'p'].includes(e.key)
       && e.ctrlKey
     ) {
+      // navigate next/previous tab in side dock
       const tab = (activeLeaf as any).tabHeaderEl;
       if (e.key === 'p') {
-        (
-          tab.previousElementSibling || tab.parentElement.lastElementChild
-        ).click();
+        (tab.previousElementSibling || tab.parentElement.lastElementChild).click();
       } else {
-        (
-          tab.nextElementSibling || tab.parentElement.firstElementChild
-        ).click();
+        (tab.nextElementSibling || tab.parentElement.firstElementChild).click();
       }
       return;
     } else if (
-      ['INPUT', 'TEXTAREA'].includes(
-        (document.activeElement as HTMLElement).tagName,
-      )
-      || document.activeElement?.matches(
-        '[class*="metadata-input"], [role="textbox"], [contenteditable="true"]',
-      )
+      ['INPUT', 'TEXTAREA'].includes((document.activeElement as HTMLElement).tagName)
+      || document.activeElement?.matches('[class*="metadata-input"], [role="textbox"], [contenteditable="true"]')
       || document.querySelector('.jl.popover, .vimium-marker')
       || !pane
       || pane.querySelector('.has-focus.is-being-renamed')
@@ -802,6 +774,7 @@ export default class CustomCommands extends Plugin {
     }
     if (view.metadataEditor?.hasPropertyFocused()) {
       if (e.key === 'd') {
+        // delete selected properties in metadata editor
         const properties: any[] = [];
         const editor = view.metadataEditor;
         if (editor.selectedLines.size) {
@@ -815,29 +788,23 @@ export default class CustomCommands extends Plugin {
         editor.removeProperties(properties);
       }
       return;
-    } else if (
-      document.activeElement?.matches('.metadata-properties-heading')
-    ) {
-      if (e.key === 'l' || e.key === 'o')
+    } else if (document.activeElement?.matches('.metadata-properties-heading')) {
+      if (e.key === 'l' || e.key === 'o') // collapse/expand properties
         (document.activeElement as HTMLElement).click();
       return;
     }
-    if (
-      !['markdown', 'kanban', 'canvas', 'lineage', 'pdf', 'empty', 'bases'].includes(
-        type,
-      )
-    ) {
+    if (!['markdown', 'kanban', 'canvas', 'lineage', 'pdf', 'empty', 'bases'].includes(type)) { // sidebars
       e.preventDefault();
       switch (e.key) {
-        case 'h':
+        case 'h': // navigate to parent
           tree?.onKeyArrowLeft(e);
           break;
         case 'j':
-        case 'J':
+        case 'J': // navigate down
           tree?.onKeyArrowDown(e);
           break;
         case 'k':
-        case 'K':
+        case 'K': // navigate up
           tree?.onKeyArrowUp(e);
           break;
         case 'l':
@@ -845,23 +812,20 @@ export default class CustomCommands extends Plugin {
           if (tree) {
             const focused = tree.focusedItem;
             if (focused.collapsible) {
-              if (e.key === 'o' || type === 'file-explorer') {
+              if (e.key === 'o' || type === 'file-explorer') { // toggle collapse
                 focused.toggleCollapsed();
-              } else {
+              } else { // open
                 tree.onKeyOpen(e);
               }
-            } else {
+            } else { // open file and close sidebar
               tree.onKeyOpen(e);
-              if (type === 'file-explorer') {
-                (this.app as any).commands.executeCommandById(
-                  'app:toggle-left-sidebar',
-                );
-              }
+              if (type === 'file-explorer')
+                (this.app as any).commands.executeCommandById('app:toggle-left-sidebar');
             }
           }
           break;
         case 'L':
-        case 'O':
+        case 'O': // open file in new tab
           pane.dispatchEvent(
             new KeyboardEvent('keydown', {
               key: 'Enter',
@@ -869,50 +833,34 @@ export default class CustomCommands extends Plugin {
               shiftKey: false,
             }),
           );
-          if (type === 'file-explorer') {
-            (this.app as any).commands.executeCommandById(
-              'app:toggle-left-sidebar',
-            );
-          }
+          if (type === 'file-explorer')
+            (this.app as any).commands.executeCommandById('app:toggle-left-sidebar');
           break;
         case 'd':
           if (type === 'file-explorer') {
-            if (document.querySelector('.mod-confirmation')) {
-              (
-                document.querySelector(
-                  '.mod-confirmation button.mod-warning',
-                ) as HTMLElement
-              ).click();
-            } else {
+            if (document.querySelector('.mod-confirmation')) { // confirm delete
+              (document.querySelector('.mod-confirmation button.mod-warning') as HTMLElement).click();
+            } else { // delete file/folder
               tree.handleDeleteSelectedItems(e);
             }
           }
           break;
         case 'r':
-          if (type === 'file-explorer')
+          if (type === 'file-explorer') // rename file/folder
             tree.handleRenameFocusedItem(e);
           break;
         case 'a':
         case 'A':
-          if (type === 'file-explorer') {
+          if (type === 'file-explorer') { // create new file/folder
             let target = tree.focusedItem.file;
             if (target) {
               target = target.children ? target : target.parent;
-              const func = `createNew${
-                e.shiftKey ? 'Folder' : 'MarkdownFile'
-              }`;
+              const func = `createNew${e.shiftKey ? 'Folder' : 'MarkdownFile'}`;
               (this.app.fileManager as any)[func](target).then(
                 (file: TFile) => {
-                  const folderItem = pane.querySelector(
-                    `.tree-item-self[data-path="${target.path}"]`,
-                  );
-                  if (
-                    folderItem?.parentElement?.matches(
-                      '.is-collapsed',
-                    )
-                  ) {
+                  const folderItem = pane.querySelector(`.tree-item-self[data-path="${target.path}"]`);
+                  if (folderItem?.parentElement?.matches('.is-collapsed'))
                     (folderItem as HTMLElement).click();
-                  }
                   sleepUntil(
                     () => view.fileItems[file.path],
                     1000,
@@ -927,18 +875,13 @@ export default class CustomCommands extends Plugin {
           break;
         case 'P':
           if (type === 'file-explorer') {
-            const hoverEditor
-              = (this.app as any).plugins.plugins['obsidian-hover-editor'];
+            const hoverEditor = (this.app as any).plugins.plugins['obsidian-hover-editor'];
             const { activePopovers } = hoverEditor;
             if (activePopovers.length === 1) {
               const p = activePopovers[0];
               const l = p.leaves()[0];
-              if (
-                l.view.file.path === tree.focusedItem.file.path
-              ) {
-                this.app.workspace.setActiveLeaf(l, {
-                  focus: true,
-                });
+              if (l.view.file.path === tree.focusedItem.file.path) {
+                this.app.workspace.setActiveLeaf(l, { focus: true });
                 return;
               } else {
                 p.hide();
@@ -954,10 +897,7 @@ export default class CustomCommands extends Plugin {
         case 'y': {
           let text: string;
           if (type === 'file-explorer') {
-            text = tree.focusedItem.file.path.replace(
-              /\.md$/,
-              '',
-            );
+            text = tree.focusedItem.file.path.replace(/\.md$/, '');
           } else {
             text = tree.focusedItem.innerEl.textContent;
           }
@@ -967,8 +907,7 @@ export default class CustomCommands extends Plugin {
         }
         case 'Y':
           if (type === 'file-explorer') {
-            const basePath = (this.app.vault.adapter as any)
-              .basePath;
+            const basePath = (this.app.vault.adapter as any).basePath;
             const text = `${basePath}/${tree.focusedItem.file.path}`;
             navigator.clipboard.writeText(text);
             this.notify(`Yanked: ${text}`);
@@ -976,71 +915,53 @@ export default class CustomCommands extends Plugin {
           break;
         case 'g':
           tree.containerEl.scrollTo({ top: 0 });
-          tree.setFocusedItem(
-            tree.infinityScroll.rootEl.vChildren._children[0],
-          );
+          tree.setFocusedItem(tree.infinityScroll.rootEl.vChildren._children[0]);
           break;
         case 'G':
-          tree.containerEl.scrollTo({
-            top: tree.containerEl.scrollHeight,
-          });
-          tree.setFocusedItem(
-            tree.infinityScroll.rootEl.vChildren._children.at(-1),
-          );
+          tree.containerEl.scrollTo({ top: tree.containerEl.scrollHeight });
+          tree.setFocusedItem(tree.infinityScroll.rootEl.vChildren._children.at(-1));
           break;
         case 'q':
           if (pane.closest('.mod-left-split')) {
-            (this.app as any).commands.executeCommandById(
-              'app:toggle-left-sidebar',
-            );
+            (this.app as any).commands.executeCommandById('app:toggle-left-sidebar');
           } else if (pane.closest('.mod-right-split')) {
-            (this.app as any).commands.executeCommandById(
-              'app:toggle-right-sidebar',
-            );
+            (this.app as any).commands.executeCommandById('app:toggle-right-sidebar');
           }
           break;
         case 'S':
           (
-            pane.querySelector(
-              '.nav-action-button[aria-label*="Change sort order"]',
-            ) as HTMLElement
+            pane.querySelector('.nav-action-button[aria-label*="Change sort order"]') as HTMLElement
           )?.click();
           break;
         case '/':
           (
-            pane.querySelector(
-              '.nav-action-button[aria-label*="Show search filter"]',
-            ) as HTMLElement
+            pane.querySelector('.nav-action-button[aria-label*="Show search filter"]') as HTMLElement
           )?.click();
           break;
         case '{':
           (
-            pane.querySelector(
-              '.nav-action-button[aria-label="Collapse all"]',
-            ) as HTMLElement
+            pane.querySelector('.nav-action-button[aria-label="Collapse all"]') as HTMLElement
           )?.click();
           break;
         case '}':
           (
-            pane.querySelector(
-              '.nav-action-button[aria-label="Expand all"]',
-            ) as HTMLElement
+            pane.querySelector('.nav-action-button[aria-label="Expand all"]') as HTMLElement
           )?.click();
           break;
       }
-    } else if (type === 'empty') {
+    } else if (type === 'empty') { // empty view
       const commands: { [key: string]: string } = {
         e: 'file-explorer:new-file',
         f: 'obsidian-another-quick-switcher:search-command_recommended-search',
-        r: 'obsidian-another-quick-switcher:search-command_recent-search',
         g: 'omnisearch:show-modal',
+        r: 'obsidian-another-quick-switcher:search-command_recent-search',
         q: 'obsidian-custom-commands:close',
       };
       if (commands[e.key]) {
         e.preventDefault();
         (this.app as any).commands.executeCommandById(commands[e.key]);
       }
-    } else if (type === 'canvas') {
+    } else if (type === 'canvas') { // canvas
       let command: string | undefined;
       switch (e.key) {
         case 'j':
@@ -1049,7 +970,7 @@ export default class CustomCommands extends Plugin {
         case 'l':
         case 't':
         case 'f':
-        case 'z': {
+        case 'z': { // navigate, create node, zoom
           if (view.canvas.selection.size === 0) {
             const node = [...view.canvas.nodes.values()][0];
             view.canvas.select(node);
@@ -1069,7 +990,7 @@ export default class CustomCommands extends Plugin {
         case 'J':
         case 'K':
         case 'H':
-        case 'L': {
+        case 'L': { // scroll canvas
           view.canvas.canvasEl.style.transform = view.canvas.canvasEl.style.transform.replace(
             /\(([-.0-9]+)px, ([-.0-9]+)px\)$/,
             (...x: any[]) => {
@@ -1092,21 +1013,19 @@ export default class CustomCommands extends Plugin {
           );
           break;
         }
-        case 'd': {
+        case 'd': { // delete node
           view.canvas.deleteSelection();
           break;
         }
-        case 'i': {
+        case 'i': { // edit text node
           const node = [...view.canvas.selection][0];
           if (node)
             node.startEditing();
           break;
         }
-        case '/':
+        case '/': // open search
           (
-            pane.querySelector(
-              '.nav-action-button[aria-label*="Show search filter"]',
-            ) as HTMLElement
+            pane.querySelector('.nav-action-button[aria-label*="Show search filter"]') as HTMLElement
           )?.click();
           break;
       }
@@ -1117,7 +1036,7 @@ export default class CustomCommands extends Plugin {
     } else if (
       (type === 'markdown' && view.getMode() === 'preview')
       || ['pdf', 'kanban', 'bases'].includes(type)
-    ) {
+    ) { // markdown preview, pdf, kanban, bases
       let v: HTMLElement | undefined | null;
       switch (type) {
         case 'markdown':
@@ -1129,9 +1048,7 @@ export default class CustomCommands extends Plugin {
         case 'kanban':
           if (document.activeElement?.matches('.cm-content'))
             return;
-          v = view.contentEl.querySelector(
-            '.kanban-plugin__scroll-container',
-          );
+          v = view.contentEl.querySelector('.kanban-plugin__scroll-container');
           break;
         case 'bases':
           v = view.contentEl.querySelector('.bases-view');
@@ -1176,32 +1093,26 @@ export default class CustomCommands extends Plugin {
           left = v!.scrollWidth;
           break;
         case 'q':
-        case 'i':
+        case 'i': // enter edit mode in markdown preview
           if (type === 'markdown')
             command = 'markdown:toggle-preview';
           break;
-        case '[':
+        case '[': // back in history
           command = 'app:go-back';
           break;
-        case ']':
+        case ']': // forward in history
           command = 'app:go-forward';
           break;
-        case '/':
+        case '/': // open search
           command = 'editor:open-search';
           break;
-        case '+':
-          if (type === 'pdf') {
-            (
-              view.viewer.child.pdfViewer.toolbar.zoomInEl as HTMLElement
-            ).click();
-          }
+        case '+': // zoom in in pdf
+          if (type === 'pdf')
+            (view.viewer.child.pdfViewer.toolbar.zoomInEl as HTMLElement).click();
           break;
-        case '-':
-          if (type === 'pdf') {
-            (
-              view.viewer.child.pdfViewer.toolbar.zoomOutEl as HTMLElement
-            ).click();
-          }
+        case '-': // zoom out in pdf
+          if (type === 'pdf')
+            (view.viewer.child.pdfViewer.toolbar.zoomOutEl as HTMLElement).click();
           break;
       }
       if (top) {
