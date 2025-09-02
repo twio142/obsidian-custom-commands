@@ -89,11 +89,8 @@ export default class CustomCommands extends Plugin {
       onElement(
         document as any,
         'click',
-        `
-        .empty-state-action.mod-close,
-        .markdown-rendered button.copy-code-button,
-        .markdown-source-view .cm-line .cm-indent
-      `,
+        `.markdown-rendered button.copy-code-button,
+        .markdown-source-view .cm-line .cm-indent`,
         this.clickListener.bind(this),
       ),
     );
@@ -244,7 +241,6 @@ export default class CustomCommands extends Plugin {
       },
     });
 
-    (this.app.workspace as any).activeLeaf?.onResize();
     console.log('Custom Commands Plugin loaded.');
   }
 
@@ -622,19 +618,6 @@ export default class CustomCommands extends Plugin {
     this.app.fileManager.trashFile(file);
   }
 
-  closeLastTab() {
-    const activeLeaf = this.app.workspace.getLeaf();
-    if (!activeLeaf)
-      return;
-    if (
-      (this.app.workspace.rootSplit as any).children.length === 1
-      && (this.app.workspace as any).activeTabGroup.children.length === 1
-      && (activeLeaf.view as any).emptyStateEl
-    ) {
-      window.close();
-    }
-  }
-
   /* fold/unfold sublists under current indent level */
   foldSublists(target: HTMLElement) {
     const getLevel = (el: HTMLElement) =>
@@ -673,9 +656,6 @@ export default class CustomCommands extends Plugin {
 
   clickListener(event: MouseEvent) {
     const target = event.target as HTMLElement;
-    if (target.matches('.empty-state-action.mod-close')) {
-      event.preventDefault();
-      this.closeLastTab();
     if (target.matches('.markdown-source-view .cm-line .cm-indent')) {
       // click on indent to fold/unfold sublists
       event.preventDefault();
