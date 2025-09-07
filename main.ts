@@ -73,8 +73,7 @@ export default class CustomCommands extends Plugin {
       this.app.workspace.on('active-leaf-change', (l: WorkspaceLeaf | null) => {
         if (l && l.view.getViewType() === 'outline') {
           // sync focused item in outline with cursor position
-          const { tree, view } = l.view as any;
-          const { cachedHeadingDom } = view;
+          const { tree, cachedHeadingDom } = l.view as any;
           const { focusedItem } = tree;
           const activeItem = cachedHeadingDom.find((h: any) =>
             h.selfEl.classList.contains('is-active'),
