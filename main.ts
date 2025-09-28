@@ -759,7 +759,7 @@ export default class CustomCommands extends Plugin {
         if (editor.selectedLines.size) {
           editor.selectedLines.values().forEach((p: any) => properties.push(p));
         } else {
-          const focused = editor._children.find(
+          const focused = editor.rendered.find(
             (p: any) => p.containerEl === document.activeElement,
           );
           properties.push(focused);
