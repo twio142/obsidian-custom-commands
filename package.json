@@ -14,17 +14,17 @@
     "lint": "npx eslint ."
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^5.2.1",
-    "@types/electron": "^1.4.38",
-    "@types/node": "^24.3.0",
-    "@typescript-eslint/eslint-plugin": "^8.41.0",
-    "@typescript-eslint/parser": "^8.41.0",
+    "@antfu/eslint-config": "^6.0.0",
+    "@types/node": "^24.9.1",
+    "@typescript-eslint/eslint-plugin": "^8.46.2",
+    "@typescript-eslint/parser": "^8.46.2",
     "builtin-modules": "^5.0.0",
-    "esbuild": "0.25.9",
-    "eslint": "^9.34.0",
-    "eslint-plugin-format": "^1.0.1",
+    "esbuild": "0.25.11",
+    "eslint": "^9.38.0",
+    "eslint-plugin-format": "^1.0.2",
+    "eslint-plugin-prettier": "^5.5.4",
     "obsidian": "latest",
     "tslib": "2.8.1",
-    "typescript": "5.9.2"
+    "typescript": "5.9.3"
   }
 }

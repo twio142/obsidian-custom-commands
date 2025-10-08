@@ -565,6 +565,10 @@ export default class CustomCommands extends Plugin {
         workspace.setActiveLeaf(split.children[split.currentTab], {
           focus: true,
         });
+      } else {
+        const header = workspace.activeLeaf.tabHeaderEl;
+        if (header?.matches(".is-active.mod-active"))
+          header.click();
       }
     } else if (direction === 'left') {
       if (workspace.activeTabGroup.currentTab > 0) {
@@ -574,6 +578,10 @@ export default class CustomCommands extends Plugin {
         workspace.setActiveLeaf(split.children[split.currentTab], {
           focus: true,
         });
+      } else {
+        const header = workspace.activeLeaf.tabHeaderEl;
+        if (header?.matches(".is-active.mod-active"))
+          header.click();
       }
     }
   }

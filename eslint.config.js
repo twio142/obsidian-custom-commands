@@ -2,10 +2,8 @@ import antfu from '@antfu/eslint-config';
 
 export default antfu({
   ignores: [
-    '**/*.js',
-    '**/*.html',
     '**/*.md',
-    '**/*.yaml',
+    '**/*.js',
   ],
 }, {
   rules: {
@@ -14,5 +12,6 @@ export default antfu({
     'no-console': 'off',
     'unicorn/prefer-node-protocol': 'off',
     'node/prefer-global/process': 'off',
+    'yml/quotes': ['error', { prefer: 'double' }],
   },
 });
