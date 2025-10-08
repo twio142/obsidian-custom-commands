@@ -1,10 +1,10 @@
 {
-	"id": "obsidian-custom-commands",
-	"name": "Custom Commands",
-	"version": "1.0.1",
-	"minAppVersion": "0.12.0",
-	"description": "My custom commands for Obsidian",
-	"author": "twio142",
-	"authorUrl": "https://github.com/twio142",
-	"isDesktopOnly": false
+  "id": "obsidian-custom-commands",
+  "name": "Custom Commands",
+  "version": "1.0.1",
+  "minAppVersion": "0.12.0",
+  "description": "My custom commands for Obsidian",
+  "author": "twio142",
+  "authorUrl": "https://github.com/twio142",
+  "isDesktopOnly": false
 }
