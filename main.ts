@@ -4,6 +4,7 @@ import type {
   TFile,
   WorkspaceLeaf,
 } from 'obsidian';
+// @ts-expect-error electron
 import { remote } from 'electron';
 import {
   Notice,
