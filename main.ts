@@ -4,6 +4,7 @@ import type {
   TFile,
   WorkspaceLeaf,
 } from 'obsidian';
+import { readFile, writeFile } from 'fs';
 // @ts-expect-error electron
 import { remote } from 'electron';
 import {
@@ -81,6 +82,22 @@ export default class CustomCommands extends Plugin {
           );
           if (focusedItem !== activeItem)
             tree.setFocusedItem(activeItem);
+        }
+      }),
+    );
+
+    this.registerEvent(
+      // after a new note is renamed, update its heading
+      this.app.vault.on('rename', (file: TFile, oldPath: string) => {
+        if (oldPath === 'Untitled.md' && file.stat.size === 10) {
+          const fullPath = (this.app.vault.adapter as any).getFullPath(file.path);
+          readFile(fullPath, 'utf8', (err: any, data: string) => {
+            if (!err && data.trim() === '# Untitled') {
+              const title = file.name.replace(/\.md$/, '').replace(/^./, c => c.toUpperCase());
+              const newData = `# ${title}\n`;
+              writeFile(fullPath, newData, 'utf8', () => {});
+            }
+          });
         }
       }),
     );
@@ -568,7 +585,7 @@ export default class CustomCommands extends Plugin {
         });
       } else {
         const header = workspace.activeLeaf.tabHeaderEl;
-        if (header?.matches(".is-active.mod-active"))
+        if (header?.matches('.is-active.mod-active'))
           header.click();
       }
     } else if (direction === 'left') {
@@ -581,7 +598,7 @@ export default class CustomCommands extends Plugin {
         });
       } else {
         const header = workspace.activeLeaf.tabHeaderEl;
-        if (header?.matches(".is-active.mod-active"))
+        if (header?.matches('.is-active.mod-active'))
           header.click();
       }
     }
