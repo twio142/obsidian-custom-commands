@@ -1,7 +1,6 @@
 import type {
   Editor,
   EditorPosition,
-  TFile,
   WorkspaceLeaf,
 } from 'obsidian';
 import { readFile, writeFile } from 'fs';
@@ -10,6 +9,8 @@ import { remote } from 'electron';
 import {
   Notice,
   Plugin,
+  TAbstractFile,
+  TFile,
 } from 'obsidian';
 
 // Interfaces
@@ -52,7 +53,7 @@ async function sleepUntil(
 
 // Main plugin class
 export default class CustomCommands extends Plugin {
-  settings: CustomCommandsSettings;
+  settings!: CustomCommandsSettings;
 
   async onload() {
     // hide window buttons on macOS
@@ -88,7 +89,9 @@ export default class CustomCommands extends Plugin {
 
     this.registerEvent(
       // after a new note is renamed, update its heading
-      this.app.vault.on('rename', (file: TFile, oldPath: string) => {
+      this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
+        if (!(file instanceof TFile))
+          return;
         if (oldPath === 'Untitled.md' && file.stat.size === 10) {
           const fullPath = (this.app.vault.adapter as any).getFullPath(file.path);
           readFile(fullPath, 'utf8', (err: any, data: string) => {
