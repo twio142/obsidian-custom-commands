@@ -617,7 +617,7 @@ export default class CustomCommands extends Plugin {
 
   /* smart close */
   closeEditor() {
-    const activeLeaf = this.app.workspace.getLeaf();
+    const { activeLeaf } = this.app.workspace;
     if (!activeLeaf)
       return;
     const { view, history } = activeLeaf as any;
@@ -931,6 +931,8 @@ export default class CustomCommands extends Plugin {
             (this.app as any).commands.executeCommandById('app:toggle-left-sidebar');
           } else if (pane.closest('.mod-right-split')) {
             (this.app as any).commands.executeCommandById('app:toggle-right-sidebar');
+          } else {
+            (this.app as any).commands.executeCommandById('workspace:close');
           }
           break;
         case 'S':
