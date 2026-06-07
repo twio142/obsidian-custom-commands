@@ -1,6 +1,7 @@
 import type {
   Editor,
   EditorPosition,
+  TAbstractFile,
   WorkspaceLeaf,
 } from 'obsidian';
 import { readFile, writeFile } from 'fs';
@@ -9,7 +10,6 @@ import { remote } from 'electron';
 import {
   Notice,
   Plugin,
-  TAbstractFile,
   TFile,
 } from 'obsidian';
 
@@ -43,7 +43,7 @@ async function sleepUntil(
       if (_f) {
         clearInterval(wait);
         resolve(_f);
-      } else if (new Date().getTime() - timeWas.getTime() > timeoutMs) {
+      } else if (Date.now() - timeWas.getTime() > timeoutMs) {
         clearInterval(wait);
         reject(new Error('timed out'));
       }
@@ -83,6 +83,8 @@ export default class CustomCommands extends Plugin {
           );
           if (focusedItem !== activeItem)
             tree.setFocusedItem(activeItem);
+        } else if (l && l.view.getViewType() === 'claudian-view') {
+          (l.view.containerEl.querySelector('.claudian-input') as HTMLElement)?.focus();
         }
       }),
     );
@@ -769,6 +771,11 @@ export default class CustomCommands extends Plugin {
       }
       return;
     } else if (
+      (document.activeElement as HTMLElement).matches('textarea.claudian-input') &&
+        e.ctrlKey && e.key === 'c'
+    ) {
+      pane.querySelector('.claudian-messages-focusable')?.focus();
+    } else if (
       ['INPUT', 'TEXTAREA'].includes((document.activeElement as HTMLElement).tagName)
       || document.activeElement?.matches('[class*="metadata-input"], [role="textbox"], [contenteditable="true"]')
       || document.querySelector('.jl.popover, .vimium-marker')
@@ -801,7 +808,9 @@ export default class CustomCommands extends Plugin {
         (document.activeElement as HTMLElement).click();
       return;
     }
-    if (!['markdown', 'kanban', 'canvas', 'lineage', 'pdf', 'empty', 'bases'].includes(type)) { // sidebars
+    if (type === 'claudian-view') { // Claudian
+      pane.querySelector('.claudian-messages-focusable')?.focus();
+    } else if (!['markdown', 'kanban', 'canvas', 'lineage', 'pdf', 'empty', 'bases'].includes(type)) { // sidebars
       e.preventDefault();
       switch (e.key) {
         case 'h': // navigate to parent
@@ -1058,10 +1067,10 @@ export default class CustomCommands extends Plugin {
         case 'kanban':
           if (document.activeElement?.matches('.cm-content'))
             return;
-          v = view.contentEl.querySelector('.kanban-plugin__scroll-container');
+          v = pane.querySelector('.kanban-plugin__scroll-container');
           break;
         case 'bases':
-          v = view.contentEl.querySelector('.bases-view');
+          v = pane.querySelector('.bases-view');
           break;
       }
       let top: number | undefined, left: number | undefined, command: string | undefined, event: KeyboardEvent | undefined;
