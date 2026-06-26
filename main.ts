@@ -225,22 +225,22 @@ export default class CustomCommands extends Plugin {
     this.addCommand({
       id: 'navigate-top',
       name: 'Navigate to top',
-      callback: () => this.navigate('top'),
+      checkCallback: checking => this.navigate('top', checking),
     });
     this.addCommand({
       id: 'navigate-bottom',
       name: 'Navigate to bottom',
-      callback: () => this.navigate('bottom'),
+      checkCallback: checking => this.navigate('bottom', checking),
     });
     this.addCommand({
       id: 'navigate-left',
       name: 'Navigate to left',
-      callback: () => this.navigate('left'),
+      checkCallback: checking => this.navigate('left', checking),
     });
     this.addCommand({
       id: 'navigate-right',
       name: 'Navigate to right',
-      callback: () => this.navigate('right'),
+      checkCallback: checking => this.navigate('right', checking),
     });
     this.addCommand({
       id: 'close',
@@ -566,19 +566,14 @@ export default class CustomCommands extends Plugin {
   }
 
   /* navigate between panes, tabs, or splits */
-  navigate(direction: 'top' | 'bottom' | 'left' | 'right') {
+  navigate(direction: 'top' | 'bottom' | 'left' | 'right', checking: boolean) {
     const { workspace, commands } = this.app as any;
-    if (
-      (document.activeElement?.matches('.prompt-input') || document.querySelector('.suggestion-container'))
-      && ['top', 'bottom'].includes(direction)
-    ) { // navigate up/down in command palette or quick switcher
-      document.dispatchEvent(
-        new KeyboardEvent('keydown', {
-          key: direction === 'top' ? 'p' : 'n',
-          ctrlKey: true,
-        }),
+    if (checking) {
+      return !(['top', 'bottom'].includes(direction)
+        && (document.activeElement?.matches('.prompt-input') || document.querySelector('.suggestion-container'))
       );
-    } else if (workspace.getAdjacentLeafInDirection(workspace.activeLeaf, direction)) { // navigate to adjacent leaf
+    }
+    if (workspace.getAdjacentLeafInDirection(workspace.activeLeaf, direction)) { // navigate to adjacent leaf
       commands.executeCommandById(`editor:focus-${direction}`);
     } else if (direction === 'right') {
       if (workspace.activeTabGroup.currentTab < workspace.activeTabGroup.children.length - 1) { // navigate to next tab, if any
@@ -741,15 +736,15 @@ export default class CustomCommands extends Plugin {
     const type = view.getViewType();
     const { tree, containerEl: pane } = view;
     if (e.metaKey && e.key === 'c' && type === 'file-explorer') {
+      // copy full path of file/folder in file explorer
       const basePath = (this.app.vault.adapter as any).basePath;
       const text = `${basePath}/${tree.focusedItem.file.path}`;
       navigator.clipboard.writeText(text);
       return;
     }
     if (
-      document.activeElement?.matches('.prompt-input')
-      && ['j', 'k'].includes(e.key)
-      && e.ctrlKey
+      (document.activeElement?.matches('.prompt-input') || document.querySelector('.suggestion-container'))
+      && ['j', 'k'].includes(e.key) && e.ctrlKey
     ) {
       // navigate up/down in command palette or quick switcher
       e.preventDefault();
@@ -759,10 +754,9 @@ export default class CustomCommands extends Plugin {
       return;
     } else if (
       pane?.closest('.mod-sidedock')
-      && ['n', 'p'].includes(e.key)
-      && e.ctrlKey
+      && ['n', 'p'].includes(e.key) && e.ctrlKey
     ) {
-      // navigate next/previous tab in side dock
+      // navigate to next/previous tab in side dock
       const tab = (activeLeaf as any).tabHeaderEl;
       if (e.key === 'p') {
         (tab.previousElementSibling || tab.parentElement.lastElementChild).click();
@@ -771,9 +765,10 @@ export default class CustomCommands extends Plugin {
       }
       return;
     } else if (
-      (document.activeElement as HTMLElement).matches('textarea.claudian-input') &&
-        e.ctrlKey && e.key === 'c'
+      (document.activeElement as HTMLElement).matches('textarea.claudian-input')
+      && e.key === 'c' && e.ctrlKey
     ) {
+      // move focus from input to messages in Claudian
       pane.querySelector('.claudian-messages-focusable')?.focus();
     } else if (
       ['INPUT', 'TEXTAREA'].includes((document.activeElement as HTMLElement).tagName)
