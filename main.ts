@@ -62,6 +62,21 @@ export default class CustomCommands extends Plugin {
       w.setWindowButtonVisibility(false);
     }
 
+    // sync window background with theme
+    let bgColor = '';
+    const syncWindows = () => {
+      bgColor = getComputedStyle(document.body)
+        .getPropertyValue('--background-primary')
+        .trim()
+        || getComputedStyle(document.body).backgroundColor;
+      remote.BrowserWindow.getAllWindows().forEach((win: any) => win.setBackgroundColor(bgColor));
+    };
+    const onWindowCreated = (_e: any, win: any) => win.setBackgroundColor(bgColor);
+    syncWindows();
+    remote.app.on('browser-window-created', onWindowCreated);
+    this.registerEvent(this.app.workspace.on('css-change', syncWindows)); // re-sync on theme change
+    this.register(() => remote.app.removeListener('browser-window-created', onWindowCreated));
+
     this.registerMarkdownPostProcessor((el) => {
       el.findAll('a.footnote-link').forEach((footnote) => {
         // remove brackets around footnote links
