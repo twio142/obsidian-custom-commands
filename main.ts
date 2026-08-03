@@ -150,6 +150,28 @@ export default class CustomCommands extends Plugin {
 
     document.addEventListener('keydown', this.keydownListener.bind(this));
 
+    // keybindings inside the separate settings window (its own document/realm)
+    const settingsKeydown = this.settingsKeydown.bind(this);
+    const onSettingsWindow = async (_e: any, win: any) => {
+      const id = win.webContents?.id;
+      let sw: any;
+      try {
+        // wait for Obsidian to populate app.setting.win for this window
+        sw = await sleepUntil(() => {
+          const s = (this.app as any).setting?.win;
+          return s?.electronWindow?.webContents?.id === id ? s : null;
+        }, 3000);
+      } catch {
+        return; // not the settings window
+      }
+      sw.document.addEventListener('keydown', settingsKeydown, true);
+    };
+    remote.app.on('browser-window-created', onSettingsWindow);
+    this.register(() => {
+      remote.app.removeListener('browser-window-created', onSettingsWindow);
+      (this.app as any).setting?.win?.document?.removeEventListener('keydown', settingsKeydown, true);
+    });
+
     await this.loadSettings();
 
     this.addCommand({
@@ -738,6 +760,53 @@ export default class CustomCommands extends Plugin {
       idt.forEach(i =>
         i?.classList[event.type === 'mouseover' ? 'add' : 'remove']('cm-active-indent'),
       );
+    }
+  }
+
+  settingsKeydown(e: KeyboardEvent) {
+    const setting = (this.app as any).setting;
+    const doc = setting?.win?.document as Document | undefined;
+    if (!doc)
+      return;
+    const active = doc.activeElement as HTMLElement | null;
+    // Tab/Enter in the settings search bar -> focus the active tab (fallback: first)
+    if (
+      (e.key === 'Tab' || e.key === 'Enter') && !e.shiftKey
+      && active?.matches('.vertical-tab-header input, input.search-input')
+    ) {
+      const nav = doc.querySelector('.vertical-tab-nav-item.setting-search-result-tab')
+        || doc.querySelector('.vertical-tab-nav-item.is-active')
+        || doc.querySelector('.vertical-tab-nav-item');
+      if (nav) {
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        (nav as HTMLElement).focus();
+      }
+      return;
+    }
+    // Ctrl-n / Ctrl-p -> Down / Up
+    if (e.ctrlKey && !e.metaKey && !e.altKey && (e.key === 'n' || e.key === 'p')) {
+      e.preventDefault();
+      const key = e.key === 'n' ? 'ArrowDown' : 'ArrowUp';
+      (active || doc).dispatchEvent(new KeyboardEvent('keydown', {
+        key,
+        code: key,
+        bubbles: true,
+        cancelable: true,
+      }));
+      return;
+    }
+    if (
+      active
+      && (['INPUT', 'TEXTAREA'].includes(active.tagName)
+        || active.matches('[contenteditable="true"], [role="textbox"]'))
+    ) {
+      return; // inserting text
+    }
+    // q -> close window
+    if (e.key === 'q' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      setting.close();
     }
   }
 
