@@ -1,7 +1,7 @@
 {
   "id": "obsidian-custom-commands",
   "name": "Custom Commands",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "minAppVersion": "1.13.0",
   "description": "My custom commands for Obsidian",
   "author": "twio142",
