@@ -62,19 +62,22 @@ export default class CustomCommands extends Plugin {
     }
 
     // sync window background with theme
-    let bgColor = '';
-    const syncWindows = () => {
-      bgColor = getComputedStyle(document.body)
-        .getPropertyValue('--background-primary')
-        .trim()
-        || getComputedStyle(document.body).backgroundColor;
-      remote.BrowserWindow.getAllWindows().forEach((win: any) => win.setBackgroundColor(bgColor));
-    };
-    const onWindowCreated = (_e: any, win: any) => win.setBackgroundColor(bgColor);
-    syncWindows();
-    remote.app.on('browser-window-created', onWindowCreated);
-    this.registerEvent(this.app.workspace.on('css-change', syncWindows)); // re-sync on theme change
-    this.register(() => remote.app.removeListener('browser-window-created', onWindowCreated));
+    // skipped outside Electron (e.g. Obsidian in a browser shim), where there are no native windows
+    if (w.setBackgroundColor) {
+      let bgColor = '';
+      const syncWindows = () => {
+        bgColor = getComputedStyle(document.body)
+          .getPropertyValue('--background-primary')
+          .trim()
+          || getComputedStyle(document.body).backgroundColor;
+        remote.BrowserWindow.getAllWindows().forEach((win: any) => win.setBackgroundColor(bgColor));
+      };
+      const onWindowCreated = (_e: any, win: any) => win.setBackgroundColor(bgColor);
+      syncWindows();
+      remote.app.on('browser-window-created', onWindowCreated);
+      this.registerEvent(this.app.workspace.on('css-change', syncWindows)); // re-sync on theme change
+      this.register(() => remote.app.removeListener('browser-window-created', onWindowCreated));
+    }
 
     this.registerMarkdownPostProcessor((el) => {
       el.findAll('a.footnote-link').forEach((footnote) => {
@@ -111,8 +114,7 @@ export default class CustomCommands extends Plugin {
         if (oldPath === 'Untitled.md' && file.stat.size === 10) {
           const title = file.basename.replace(/^./, c => c.toUpperCase());
           this.app.vault.process(file, data =>
-            data.trim() === '# Untitled' ? `# ${title}\n` : data,
-          );
+            data.trim() === '# Untitled' ? `# ${title}\n` : data);
         }
       }),
     );
@@ -143,7 +145,7 @@ export default class CustomCommands extends Plugin {
       ),
     );
 
-    document.addEventListener('keydown', this.keydownListener.bind(this));
+    this.registerDomEvent(document, 'keydown', this.keydownListener.bind(this));
 
     // keybindings inside the separate settings window (its own document/realm)
     const settingsKeydown = this.settingsKeydown.bind(this);
@@ -302,7 +304,6 @@ export default class CustomCommands extends Plugin {
     const w = remote.getCurrentWindow() as any;
     if (w.setWindowButtonVisibility)
       w.setWindowButtonVisibility(true);
-    document.removeEventListener('keydown', this.keydownListener);
     console.log('Custom Commands Plugin unloaded.');
   }
 
