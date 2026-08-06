@@ -4,7 +4,6 @@ import type {
   TAbstractFile,
   WorkspaceLeaf,
 } from 'obsidian';
-import { readFile, writeFile } from 'fs';
 // @ts-expect-error electron
 import { remote } from 'electron';
 import {
@@ -110,14 +109,10 @@ export default class CustomCommands extends Plugin {
         if (!(file instanceof TFile))
           return;
         if (oldPath === 'Untitled.md' && file.stat.size === 10) {
-          const fullPath = (this.app.vault.adapter as any).getFullPath(file.path);
-          readFile(fullPath, 'utf8', (err: any, data: string) => {
-            if (!err && data.trim() === '# Untitled') {
-              const title = file.name.replace(/\.md$/, '').replace(/^./, c => c.toUpperCase());
-              const newData = `# ${title}\n`;
-              writeFile(fullPath, newData, 'utf8', () => {});
-            }
-          });
+          const title = file.basename.replace(/^./, c => c.toUpperCase());
+          this.app.vault.process(file, data =>
+            data.trim() === '# Untitled' ? `# ${title}\n` : data,
+          );
         }
       }),
     );
