@@ -125,7 +125,7 @@ export default class CustomCommands extends Plugin {
         'click',
         `.markdown-rendered button.copy-code-button,
         .markdown-source-view .cm-line .cm-indent`,
-        this.clickListener.bind(this),
+        this.#clickListener.bind(this),
       ),
     );
     this.register(
@@ -133,7 +133,7 @@ export default class CustomCommands extends Plugin {
         document as any,
         'mouseover',
         '.markdown-source-view .cm-line .cm-indent',
-        this.mouseListener.bind(this),
+        this.#mouseListener.bind(this),
       ),
     );
     this.register(
@@ -141,14 +141,14 @@ export default class CustomCommands extends Plugin {
         document as any,
         'mouseout',
         '.markdown-source-view .cm-line .cm-indent',
-        this.mouseListener.bind(this),
+        this.#mouseListener.bind(this),
       ),
     );
 
-    this.registerDomEvent(document, 'keydown', this.keydownListener.bind(this));
+    this.registerDomEvent(document, 'keydown', this.#keydownListener.bind(this));
 
     // keybindings inside the separate settings window (its own document/realm)
-    const settingsKeydown = this.settingsKeydown.bind(this);
+    const settingsKeydown = this.#settingsKeydown.bind(this);
     const onSettingsWindow = async (_e: any, win: any) => {
       const id = win.webContents?.id;
       let sw: any;
@@ -247,14 +247,9 @@ export default class CustomCommands extends Plugin {
       editorCallback: editor => this.toggleHeading(editor, 6),
     });
     this.addCommand({
-      id: 'copy-path',
-      name: 'Copy file full path',
-      editorCallback: () => this.copyPath(),
-    });
-    this.addCommand({
-      id: 'delete-file',
-      name: 'Delete current file',
-      callback: () => this.deleteFile(),
+      id: 'delete-note',
+      name: 'Delete current note',
+      callback: () => this.deleteNote(),
     });
     this.addCommand({
       id: 'navigate-top',
@@ -282,9 +277,9 @@ export default class CustomCommands extends Plugin {
       callback: () => this.closeEditor(),
     });
     this.addCommand({
-      id: 'new-file-in-path',
-      name: 'Create new file in path',
-      callback: () => this.newFileInPath(),
+      id: 'new-note-in-path',
+      name: 'Create new note in path',
+      callback: () => this.newNoteInPath(),
     });
     this.addCommand({
       id: 'new-tab',
@@ -588,16 +583,6 @@ export default class CustomCommands extends Plugin {
     new Notice(message, timeout);
   }
 
-  /* copy current file full path to clipboard */
-  copyPath() {
-    const file = this.app.workspace.getActiveFile();
-    if (!file)
-      return;
-    const path = `${(this.app.vault.adapter as any).basePath}/${file.path}`;
-    navigator.clipboard.writeText(path);
-    this.notify('Path copied to clipboard!');
-  }
-
   /* navigate between panes, tabs, or splits */
   navigate(direction: 'top' | 'bottom' | 'left' | 'right', checking: boolean) {
     const { workspace, commands } = this.app as any;
@@ -637,8 +622,8 @@ export default class CustomCommands extends Plugin {
     }
   }
 
-  /* create new file in current file's folder */
-  newFileInPath() {
+  /* create new note in current note's folder */
+  newNoteInPath() {
     const activeLeaf = this.app.workspace.getLeaf();
     if (!activeLeaf || !(activeLeaf.view as any).file)
       return;
@@ -667,8 +652,8 @@ export default class CustomCommands extends Plugin {
     }
   }
 
-  /* move file to trash and close current tab */
-  deleteFile() {
+  /* move note to trash and close current tab */
+  deleteNote() {
     const file = this.app.workspace.getActiveFile();
     if (!file)
       return;
@@ -712,7 +697,7 @@ export default class CustomCommands extends Plugin {
     });
   }
 
-  clickListener(event: MouseEvent) {
+  #clickListener(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (target.matches('.markdown-source-view .cm-line .cm-indent')) {
       // click on indent to fold/unfold sublists
@@ -728,7 +713,7 @@ export default class CustomCommands extends Plugin {
     }
   }
 
-  mouseListener(event: MouseEvent) {
+  #mouseListener(event: MouseEvent) {
     const target = event.target as HTMLElement;
     if (target.matches('.markdown-source-view .cm-line .cm-indent')) {
       // highlight indent line on hover
@@ -759,7 +744,7 @@ export default class CustomCommands extends Plugin {
     }
   }
 
-  settingsKeydown(e: KeyboardEvent) {
+  #settingsKeydown(e: KeyboardEvent) {
     const setting = (this.app as any).setting;
     const doc = setting?.win?.document as Document | undefined;
     if (!doc)
@@ -806,7 +791,7 @@ export default class CustomCommands extends Plugin {
     }
   }
 
-  keydownListener(e: KeyboardEvent) {
+  #keydownListener(e: KeyboardEvent) {
     // NOTE: getLeaf() only returns editor leaf, not sidebar leaf
     // so activeLeaf is still needed
     const { activeLeaf } = this.app.workspace;
