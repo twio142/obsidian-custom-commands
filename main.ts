@@ -254,22 +254,22 @@ export default class CustomCommands extends Plugin {
     this.addCommand({
       id: 'navigate-top',
       name: 'Navigate to top',
-      checkCallback: checking => this.navigate('top', checking),
+      callback: () => this.navigate('top'),
     });
     this.addCommand({
       id: 'navigate-bottom',
       name: 'Navigate to bottom',
-      checkCallback: checking => this.navigate('bottom', checking),
+      callback: () => this.navigate('bottom'),
     });
     this.addCommand({
       id: 'navigate-left',
       name: 'Navigate to left',
-      checkCallback: checking => this.navigate('left', checking),
+      callback: () => this.navigate('left'),
     });
     this.addCommand({
       id: 'navigate-right',
       name: 'Navigate to right',
-      checkCallback: checking => this.navigate('right', checking),
+      callback: () => this.navigate('right'),
     });
     this.addCommand({
       id: 'close',
@@ -583,14 +583,24 @@ export default class CustomCommands extends Plugin {
     new Notice(message, timeout);
   }
 
-  /* navigate between panes, tabs, or splits */
-  navigate(direction: 'top' | 'bottom' | 'left' | 'right', checking: boolean) {
-    const { workspace, commands } = this.app as any;
-    if (checking) {
-      return !(['top', 'bottom'].includes(direction)
-        && (document.activeElement?.matches('.prompt-input') || document.querySelector('.suggestion-container'))
-      );
+  /* navigate up/down in command palette or quick switcher */
+  #navigateInList(direction: 'up' | 'down') {
+    if ((document.activeElement?.matches('input, textarea') || document.querySelector('.suggestion-container'))) {
+      const key = `arrow${direction}`;
+      document.dispatchEvent(new KeyboardEvent('keydown', { key }));
+      return true;
     }
+    return false;
+  }
+
+  /* navigate between panes, tabs, or splits */
+  navigate(direction: 'top' | 'bottom' | 'left' | 'right') {
+    if (['top', 'bottom'].includes(direction)) {
+      const map = { bottom: 'down', top: 'up' };
+      if (this.#navigateInList(map[direction as 'top' | 'bottom'] as 'up' | 'down'))
+        return;
+    }
+    const { workspace, commands } = this.app as any;
     if (workspace.getAdjacentLeafInDirection(workspace.activeLeaf, direction)) { // navigate to adjacent leaf
       commands.executeCommandById(`editor:focus-${direction}`);
     } else if (direction === 'right') {
@@ -807,16 +817,12 @@ export default class CustomCommands extends Plugin {
       navigator.clipboard.writeText(text);
       return;
     }
-    if (
-      (document.activeElement?.matches('.prompt-input') || document.querySelector('.suggestion-container'))
-      && ['j', 'k'].includes(e.key) && e.ctrlKey
-    ) {
-      // navigate up/down in command palette or quick switcher
-      e.preventDefault();
-      const map = { j: 'arrowdown', k: 'arrowup' };
-      const key = map[e.key as 'j' | 'k'];
-      document.dispatchEvent(new KeyboardEvent('keydown', { key }));
-      return;
+    if (['j', 'k'].includes(e.key) && e.ctrlKey) {
+      const map = { j: 'down', k: 'up' };
+      if (this.#navigateInList(map[e.key as 'j' | 'k'] as 'down' | 'up')) {
+        e.preventDefault();
+        return;
+      }
     } else if (
       pane?.closest('.mod-sidedock')
       && ['n', 'p'].includes(e.key) && e.ctrlKey
@@ -1013,9 +1019,13 @@ export default class CustomCommands extends Plugin {
           )?.click();
           break;
         case '/':
-          (
-            pane.querySelector('.nav-action-button[aria-label*="Show search filter"]') as HTMLElement
-          )?.click();
+          if (view.search) {
+            if (view.search.isShowing) {
+              view.search.searchComponent.inputEl.focus();
+            } else {
+              view.search.show();
+            }
+          }
           break;
         case '{':
           (
