@@ -1182,9 +1182,12 @@ export default class CustomCommands extends Plugin {
           left = v!.scrollWidth;
           break;
         case 'q':
-        case 'i': // enter edit mode in markdown preview
-          if (type === 'markdown')
+        case 'i': // enter edit mode
+          if (type === 'markdown') {
             command = 'markdown:toggle-preview';
+          } else if (type === 'kanban') {
+            command = 'obsidian-kanban:toggle-kanban-view';
+          }
           break;
         case '[': // back in history
           command = 'app:go-back';
