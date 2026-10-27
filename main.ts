@@ -405,17 +405,26 @@ export default class CustomCommands extends Plugin {
       'inline-code': ['`', '`'],
     };
     let cursor: EditorPosition | undefined;
-    const selection = (editor as any).cm.root.getSelection();
     const positions: EditorPosition[] = [];
-    if (selection.type === 'Caret') {
+    // document range of a rendered element; replaces the internal `dom.cmView`,
+    // which newer CodeMirror no longer attaches to DOM nodes
+    const span = (el: Element) => {
+      const posAtStart: number = (editor as any).cm.posAtDOM(el, 0);
+      return { posAtStart, posAtEnd: posAtStart + (el.textContent?.length ?? 0), dom: el };
+    };
+    if (!editor.somethingSelected()) {
       cursor = editor.getCursor();
-      const node = selection.focusNode.parentNode?.closest(`.cm-${style}`);
+      // look up the DOM at the editor cursor, not the window selection,
+      // which can point elsewhere (e.g. when run from vim's command line)
+      const { node: domNode } = (editor as any).cm.domAtPos(editor.posToOffset(cursor));
+      const el = domNode.nodeType === Node.TEXT_NODE ? domNode.parentElement : domNode;
+      const node = el?.closest(`.cm-${style}`);
       if (node) {
-        const range: any[] = [node.cmView];
+        const range: any[] = [span(node)];
         if (style === 'comment') {
           positions.push(
-            editor.offsetToPos(node.cmView.posAtStart),
-            editor.offsetToPos(node.cmView.posAtEnd),
+            editor.offsetToPos(span(node).posAtStart),
+            editor.offsetToPos(span(node).posAtEnd),
           );
           const text = editor
             .getRange(...(positions as [EditorPosition, EditorPosition]))
@@ -431,16 +440,16 @@ export default class CustomCommands extends Plugin {
             && node.nextElementSibling.nextElementSibling?.matches(`.cm-${style}.cm-formatting`)
           ) {
             range.push(
-              node.nextElementSibling.cmView,
-              node.nextElementSibling.nextElementSibling.cmView,
+              span(node.nextElementSibling),
+              span(node.nextElementSibling.nextElementSibling),
             );
           } else if (
             node.previousElementSibling?.matches(`.cm-${style}:not(.cm-formatting)`)
             && node.previousElementSibling.previousElementSibling?.matches(`.cm-${style}.cm-formatting`)
           ) {
             range.push(
-              node.previousElementSibling.cmView,
-              node.previousElementSibling.previousElementSibling.cmView,
+              span(node.previousElementSibling),
+              span(node.previousElementSibling.previousElementSibling),
             );
           }
         } else if (
@@ -448,8 +457,8 @@ export default class CustomCommands extends Plugin {
           && node.nextElementSibling?.matches(`.cm-${style}.cm-formatting`)
         ) {
           range.push(
-            node.previousElementSibling.cmView,
-            node.nextElementSibling.cmView,
+            span(node.previousElementSibling),
+            span(node.nextElementSibling),
           );
         }
         if (range.length === 3) {
