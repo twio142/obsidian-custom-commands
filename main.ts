@@ -1167,10 +1167,7 @@ export default class CustomCommands extends Plugin {
           top = -200;
           break;
         case 'f':
-          event = new KeyboardEvent('keydown', { key: 'PageDown' });
-          break;
-        case 'b':
-          event = new KeyboardEvent('keydown', { key: 'PageUp' });
+          command = 'mrj-jump-to-link:activate-jump-to-link'
           break;
         case 'g':
           top = -v!.scrollTop;
