@@ -1,9 +1,11 @@
+import type { EditorView } from '@codemirror/view';
 import type {
   Editor,
   EditorPosition,
   TAbstractFile,
   WorkspaceLeaf,
 } from 'obsidian';
+import { CharCategory, EditorSelection } from '@codemirror/state';
 // @ts-expect-error electron
 import { remote } from 'electron';
 import {
@@ -245,6 +247,11 @@ export default class CustomCommands extends Plugin {
       id: 'heading-6',
       name: 'Toggle heading 6',
       editorCallback: editor => this.toggleHeading(editor, 6),
+    });
+    this.addCommand({
+      id: 'select-next-match',
+      name: 'Add cursor at next match',
+      editorCallback: editor => this.selectNextMatch(editor),
     });
     this.addCommand({
       id: 'delete-note',
@@ -584,6 +591,59 @@ export default class CustomCommands extends Plugin {
     (editor as any).setHeading(
       !level || new RegExp(`^#{${level}} `).test(line) ? 0 : level,
     );
+  }
+
+  /* add a cursor at the next match of the selection (like vim `*`);
+     with no selection, select the word under the cursor first */
+  selectNextMatch(editor: Editor) {
+    const view = (editor as any).cm as EditorView;
+    const { state } = view;
+    const ranges = [...state.selection.ranges];
+    const { mainIndex } = state.selection;
+    let main = ranges[mainIndex];
+    // a word picked from an empty cursor only matches whole words, as in vim
+    let wholeWord = false;
+    if (main.empty) {
+      const word = state.wordAt(main.head);
+      if (!word)
+        return;
+      main = ranges[mainIndex] = EditorSelection.range(word.from, word.to);
+      wholeWord = true;
+    }
+    const query = state.sliceDoc(main.from, main.to);
+    const text = state.doc.toString();
+    const isWord = (pos: number) =>
+      pos >= 0 && pos < text.length
+      && state.charCategorizer(pos)(text[pos]) === CharCategory.Word;
+    const taken = (from: number, to: number) =>
+      ranges.some(r => r.from < to && r.to > from);
+    const accept = (from: number) => {
+      const to = from + query.length;
+      return !taken(from, to) && (!wholeWord || (!isWord(from - 1) && !isWord(to)));
+    };
+    // search forward from the main selection, wrapping around to the top
+    let found = -1;
+    for (let i = text.indexOf(query, main.to); i !== -1; i = text.indexOf(query, i + 1)) {
+      if (accept(i)) {
+        found = i;
+        break;
+      }
+    }
+    if (found === -1) {
+      for (let i = text.indexOf(query); i !== -1 && i < main.from; i = text.indexOf(query, i + 1)) {
+        if (accept(i)) {
+          found = i;
+          break;
+        }
+      }
+    }
+    if (found !== -1)
+      ranges.push(EditorSelection.range(found, found + query.length));
+    view.dispatch({
+      // the new match becomes the main selection, so the next run continues from it
+      selection: EditorSelection.create(ranges, found !== -1 ? ranges.length - 1 : mainIndex),
+      scrollIntoView: true,
+    });
   }
 
   /* show notification */
